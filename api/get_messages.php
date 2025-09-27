@@ -1,30 +1,31 @@
 <?php
 session_start();
+require __DIR__ . '/../config/db.php';
+
+header('Content-Type: application/json');
+
+// Check if producer is logged in
 if (empty($_SESSION['producer_logged'])) {
-    http_response_code(401);
-    echo json_encode(['error'=>'unauthorized']);
+    echo json_encode(['ok'=>false, 'error'=>'Unauthorized']);
     exit;
 }
 
-require __DIR__ . '/../config/db.php';
-header('Content-Type: application/json');
-
 try {
-    // Get active message ID
-    $stmt = $pdo->query('SELECT active_message_id FROM state WHERE id=1');
-    $active_id = $stmt->fetchColumn();
-
     // Get all messages
-    $stmt = $pdo->query('SELECT id, content FROM messages ORDER BY id DESC');
-    $messages = [];
-    while ($row = $stmt->fetch()) {
-        $row['is_active'] = ($row['id'] == $active_id) ? true : false;
-        $messages[] = $row;
+    $stmt = $pdo->query("SELECT id, title, content FROM messages ORDER BY id DESC");
+    $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get active message
+    $activeStmt = $pdo->query("SELECT active_message_id FROM state WHERE id=1");
+    $activeRow = $activeStmt->fetch(PDO::FETCH_ASSOC);
+    $activeId = $activeRow['active_message_id'] ?? null;
+
+    // Add is_active field
+    foreach ($messages as &$msg) {
+        $msg['is_active'] = ($msg['id'] == $activeId) ? 1 : 0;
     }
 
-    echo json_encode(['messages' => $messages]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+    echo json_encode(['ok'=>true, 'messages'=>$messages]);
+} catch (PDOException $e) {
+    echo json_encode(['ok'=>false, 'error'=>$e->getMessage()]);
 }
-

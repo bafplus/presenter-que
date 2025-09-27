@@ -1,103 +1,86 @@
-<!doctype html>
-<html>
+<?php
+require __DIR__ . '/config/db.php';
+?>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="utf-8">
-  <title>Presenter View</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="assets/style.css">
-  <style>
-    /* Presenter-specific overrides */
-    body {
-      background: black;
-      color: white;
-      margin: 0;
-    }
-    .presenter-wrap {
-      height: 100vh;
-      width: 100vw;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .message {
-      text-align: center;
-      max-width: 95%;
-      word-wrap: break-word;
-      font-size: 48px;   /* default size, overridden by settings */
-      line-height: 1.1;
-    }
-    #fsBtn {
-      position: fixed;
-      right: 10px;
-      top: 10px;
-      z-index: 999;
-      padding: 8px 12px;
-      background: #333;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Presenter Screen</title>
+    <style>
+        :root {
+            --bg-light: #ffffff;
+            --text-light: #000000;
+            --bg-dark: #121212;
+            --text-dark: #f4f4f4;
+        }
+        [data-theme="light"] body { background: var(--bg-light); color: var(--text-light); }
+        [data-theme="dark"]  body { background: var(--bg-dark);  color: var(--text-dark); }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            transition: background 0.5s, color 0.5s;
+        }
+
+        #message {
+            max-width: 90%;
+        }
+        #msgTitle, #msgContent {
+            transition: opacity 0.5s ease;
+            opacity: 1;
+        }
+        #msgTitle.fade, #msgContent.fade { opacity: 0; }
+
+        #msgTitle { font-weight: bold; font-size: 1.2em; margin-bottom: 10px; }
+    </style>
 </head>
 <body>
-  <div class="presenter-wrap">
-    <div class="message" id="messageArea">(no active message)</div>
-  </div>
-  <button id="fsBtn">Go Fullscreen</button>
+    <div id="message">
+        <div id="msgTitle"></div>
+        <div id="msgContent"></div>
+    </div>
 
-  <script>
-  // How often to poll the API (milliseconds)
-  const POLL_INTERVAL = 800;
+<script>
+const titleEl = document.getElementById('msgTitle');
+const contentEl = document.getElementById('msgContent');
 
-  async function fetchState() {
-    try {
-      const res = await fetch('api/get_state.php', { cache: 'no-store' });
-      return await res.json();
-    } catch (err) {
-      console.error('Error fetching state:', err);
-      return null;
-    }
-  }
+function updateState(){
+    fetch('api/get_state.php')
+        .then(r => r.json())
+        .then(res => {
+            if(!res.ok) return;
 
-  let lastMessageId = null;
+            const m = res.message;
+            const s = res.settings || {};
 
-  async function poll() {
-    const state = await fetchState();
-    if (!state) return;
+            // Fade effect for message change
+            if(titleEl.textContent !== (m && m.title ? m.title : '') ||
+               contentEl.textContent !== (m ? m.content : '')) {
+                titleEl.classList.add('fade');
+                contentEl.classList.add('fade');
+                setTimeout(()=>{ 
+                    titleEl.textContent = m && m.title ? m.title : '';
+                    contentEl.textContent = m ? m.content : '';
+                    titleEl.classList.remove('fade');
+                    contentEl.classList.remove('fade');
+                }, 200);
+            }
 
-    const msg = state.message;
-    const settings = state.settings || {};
+            // Apply settings
+            contentEl.style.fontSize = s.font_size ? s.font_size + "px" : "48px";
+            if(s.color) contentEl.style.color = s.color;
+            document.documentElement.dataset.theme = s.theme === 'dark' ? 'dark' : 'light';
+        }).catch(err => console.error(err));
+}
 
-    const messageArea = document.getElementById('messageArea');
-
-    if (msg && msg.id !== lastMessageId) {
-      messageArea.innerHTML = msg.content.replace(/\\n/g, '<br>');
-      lastMessageId = msg.id;
-    } else if (!msg && lastMessageId !== null) {
-      messageArea.textContent = '(no active message)';
-      lastMessageId = null;
-    }
-
-    // Apply settings
-    if (settings.font_size) {
-      messageArea.style.fontSize = parseInt(settings.font_size, 10) + 'px';
-    }
-    if (settings.color) {
-      messageArea.style.color = settings.color;
-    }
-  }
-
-  // Start polling
-  setInterval(poll, POLL_INTERVAL);
-  poll();
-
-  // Fullscreen toggle
-  document.getElementById('fsBtn').addEventListener('click', () => {
-    const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  });
-  </script>
+// Initial load + polling every 2 seconds
+updateState();
+setInterval(updateState, 2000);
+</script>
 </body>
 </html>

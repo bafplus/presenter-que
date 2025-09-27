@@ -1,27 +1,38 @@
 <?php
 require __DIR__ . '/../config/db.php';
+
 header('Content-Type: application/json');
 
 try {
-    $stmt = $pdo->query('SELECT active_message_id FROM state WHERE id=1');
-    $state = $stmt->fetch();
-    $active_id = $state ? $state['active_message_id'] : null;
+    // Get settings
+    $stmt = $pdo->query("SELECT k, v FROM settings");
+    $settings = [];
+    foreach ($stmt as $row) {
+        $settings[$row['k']] = $row['v'];
+    }
+
+    // Get active message
+    $stmt = $pdo->query("SELECT active_message_id FROM state WHERE id=1");
+    $activeRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    $activeId = $activeRow['active_message_id'] ?? null;
 
     $message = null;
-    if ($active_id) {
-        $stmt = $pdo->prepare('SELECT id, title, content, updated_at FROM messages WHERE id = ?');
-        $stmt->execute([$active_id]);
-        $message = $stmt->fetch();
+    if ($activeId) {
+        $stmt = $pdo->prepare("SELECT id, title, content FROM messages WHERE id=?");
+        $stmt->execute([$activeId]);
+        $message = $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    $stmt = $pdo->query('SELECT k, v FROM settings');
-    $settings = [];
-    while ($r = $stmt->fetch()) {
-        $settings[$r['k']] = $r['v'];
-    }
-
-    echo json_encode(['ok'=>true, 'active' => $active_id, 'message' => $message, 'settings' => $settings]);
-} catch (Exception $e) {
-    http_response_code(500);
+    echo json_encode([
+        'ok' => true,
+        'message' => $message,
+        'settings' => [
+            'font_size' => $settings['font_size'] ?? '48',
+            'color' => $settings['color'] ?? '#ffffff',
+            'theme' => $settings['theme'] ?? 'light'
+        ]
+    ]);
+} catch (PDOException $e) {
     echo json_encode(['ok'=>false, 'error'=>$e->getMessage()]);
 }
+

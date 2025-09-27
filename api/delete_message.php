@@ -1,37 +1,24 @@
 <?php
 session_start();
+require __DIR__ . '/../config/db.php';
+
 if (empty($_SESSION['producer_logged'])) {
-    http_response_code(401);
-    echo json_encode(['error'=>'unauthorized']);
+    echo json_encode(['ok' => false, 'error' => 'Unauthorized']);
     exit;
 }
-
-require __DIR__ . '/../config/db.php';
-header('Content-Type: application/json');
 
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 if (!$id) {
-    http_response_code(400);
-    echo json_encode(['ok'=>false,'error'=>'missing id']);
+    echo json_encode(['ok' => false, 'error' => 'Invalid ID']);
     exit;
 }
 
-try {
-    // If deleting active message, clear active
-    $stmt = $pdo->prepare('SELECT active_message_id FROM state WHERE id=1');
-    $active_id = $stmt->execute() ? $stmt->fetchColumn() : null;
+// Remove the message
+$stmt = $pdo->prepare("DELETE FROM messages WHERE id=?");
+$stmt->execute([$id]);
 
-    if ($active_id == $id) {
-        $stmt = $pdo->prepare('UPDATE state SET active_message_id = NULL WHERE id=1');
-        $stmt->execute();
-    }
+// If it was the active message, clear state
+$pdo->prepare("UPDATE state SET active_message_id = NULL WHERE active_message_id=?")
+    ->execute([$id]);
 
-    // Delete message
-    $stmt = $pdo->prepare('DELETE FROM messages WHERE id=?');
-    $stmt->execute([$id]);
-
-    echo json_encode(['ok'=>true]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['ok'=>false,'error'=>$e->getMessage()]);
-}
+echo json_encode(['ok' => true]);
