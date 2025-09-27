@@ -55,6 +55,7 @@ A live-event system where:
   - Theme toggle
 
 ## Next Steps / TODO
+- [ ] on (re)load of producer page load all messages from database. (list is empty now until at least 1 message is created, after that all other messages are shown in teh list)
 - [ ] Add message expiration or scheduled display times
 - [ ] Add multi-presenter support
 - [ ] Optimize API calls using websockets or Server-Sent Events
