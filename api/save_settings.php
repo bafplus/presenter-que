@@ -7,12 +7,23 @@ if (empty($_SESSION['producer_logged'])) {
     exit;
 }
 
-$fontSize = isset($_POST['font_size']) ? (int)$_POST['font_size'] : 48;
-$color = trim($_POST['color'] ?? '#ffffff');
-$theme = ($_POST['theme'] ?? 'light') === 'dark' ? 'dark' : 'light';
+// Collect all possible settings
+$settings = [
+    'screen_width'   => isset($_POST['screen_width']) ? (int)$_POST['screen_width'] : null,
+    'screen_height'  => isset($_POST['screen_height']) ? (int)$_POST['screen_height'] : null,
+    'header_height'  => isset($_POST['header_height']) ? (int)$_POST['header_height'] : null,
+    'clock_enabled'  => isset($_POST['clock_enabled']) ? ($_POST['clock_enabled'] ? '1' : '0') : null,
+    'clock_24h'      => isset($_POST['clock_24h']) ? ($_POST['clock_24h'] ? '1' : '0') : null,
+    'color'          => isset($_POST['color']) ? trim($_POST['color']) : null,
+    'theme'          => isset($_POST['theme']) && $_POST['theme']==='dark' ? 'dark' : 'light',
+];
 
-$pdo->prepare("REPLACE INTO settings (k,v) VALUES ('font_size', ?)")->execute([$fontSize]);
-$pdo->prepare("REPLACE INTO settings (k,v) VALUES ('color', ?)")->execute([$color]);
-$pdo->prepare("REPLACE INTO settings (k,v) VALUES ('theme', ?)")->execute([$theme]);
+// Save each non-null setting
+foreach ($settings as $k => $v) {
+    if ($v !== null) {
+        $pdo->prepare("REPLACE INTO settings (k,v) VALUES (?,?)")->execute([$k,$v]);
+    }
+}
 
 echo json_encode(['ok' => true]);
+

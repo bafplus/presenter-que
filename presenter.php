@@ -1,86 +1,154 @@
 <?php
 require __DIR__ . '/config/db.php';
+
+// Load settings
+$stmt = $pdo->query("SELECT k,v FROM settings");
+$settings = [];
+foreach ($stmt as $row) {
+    $settings[$row['k']] = $row['v'];
+}
+
+// Defaults
+$screenWidth   = $settings['screen_width'] ?? 1920;
+$screenHeight  = $settings['screen_height'] ?? 1080;
+$headerHeight  = $settings['header_height'] ?? 60;
+$clockEnabled  = $settings['clock_enabled'] ?? '1';
+$clock24h      = $settings['clock_24h'] ?? '1';
+$color         = $settings['color'] ?? '#ffffff';
+$theme         = $settings['theme'] ?? 'light';
 ?>
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="<?= htmlspecialchars($theme) ?>">
 <head>
-    <meta charset="UTF-8">
-    <title>Presenter Screen</title>
-    <style>
-        :root {
-            --bg-light: #ffffff;
-            --text-light: #000000;
-            --bg-dark: #121212;
-            --text-dark: #f4f4f4;
-        }
-        [data-theme="light"] body { background: var(--bg-light); color: var(--text-light); }
-        [data-theme="dark"]  body { background: var(--bg-dark);  color: var(--text-dark); }
-
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            transition: background 0.5s, color 0.5s;
-        }
-
-        #message {
-            max-width: 90%;
-        }
-        #msgTitle, #msgContent {
-            transition: opacity 0.5s ease;
-            opacity: 1;
-        }
-        #msgTitle.fade, #msgContent.fade { opacity: 0; }
-
-        #msgTitle { font-weight: bold; font-size: 1.2em; margin-bottom: 10px; }
-    </style>
+<meta charset="UTF-8">
+<title>Presenter Screen</title>
+<style>
+body { margin:0; background:#000; color:<?= htmlspecialchars($color) ?>; font-family:Arial, sans-serif; }
+#container { width:<?= (int)$screenWidth ?>px; height:<?= (int)$screenHeight ?>px; margin:auto; display:flex; flex-direction:column; }
+#header { 
+    height: <?= (int)$headerHeight ?>px; 
+    line-height: <?= (int)$headerHeight ?>px; 
+    font-weight:bold; 
+    font-size: <?= ((int)$headerHeight - 20) ?>px; 
+    padding: 0 10px; 
+    box-sizing:border-box; 
+    display:flex; 
+    align-items:center; 
+    justify-content:flex-start; 
+    overflow:hidden; 
+}
+#messageContainer { 
+    flex:1; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+    padding:20px; 
+    box-sizing:border-box; 
+    text-align:center; 
+    overflow:hidden; 
+}
+#messageText { display:inline-block; word-wrap:break-word; transition: opacity 0.3s ease; white-space: pre-wrap; }
+#messageTitle { font-weight:bold; display:block; margin-bottom:10px; }
+</style>
 </head>
 <body>
-    <div id="message">
-        <div id="msgTitle"></div>
-        <div id="msgContent"></div>
+
+<div id="container">
+    <div id="header">
+        <?php if($clockEnabled==='1'): ?>
+            <span id="clock">--:--:--</span>
+        <?php endif; ?>
     </div>
+    <div id="messageContainer">
+        <span id="messageText"><span id="messageTitle"></span></span>
+    </div>
+</div>
 
 <script>
-const titleEl = document.getElementById('msgTitle');
-const contentEl = document.getElementById('msgContent');
+const messageEl = document.getElementById('messageText');
+const messageTitleEl = document.getElementById('messageTitle');
+const containerEl = document.getElementById('messageContainer');
+const headerEl = document.getElementById('header');
+const clockEl = document.getElementById('clock');
 
-function updateState(){
+// Clock update
+function updateClock(){
+    if(!clockEl) return;
+    const d = new Date();
+    const hh = d.getHours().toString().padStart(2,'0');
+    const mm = d.getMinutes().toString().padStart(2,'0');
+    const ss = d.getSeconds().toString().padStart(2,'0');
+    clockEl.textContent = hh + ":" + mm + ":" + ss;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// Fit message text inside container
+function fitText(el){
+    const containerHeight = containerEl.clientHeight;
+    const containerWidth = containerEl.clientWidth;
+    let fontSize = 10;
+    el.style.fontSize = fontSize + 'px';
+
+    while(el.scrollHeight <= containerHeight && el.scrollWidth <= containerWidth && fontSize < 1000){
+        fontSize += 2;
+        el.style.fontSize = fontSize + 'px';
+    }
+    el.style.fontSize = (fontSize - 2) + 'px';
+}
+
+// Store current displayed message
+let currentMessageId = null;
+
+// Fetch active message + settings
+function updateState() {
     fetch('api/get_state.php')
         .then(r => r.json())
         .then(res => {
-            if(!res.ok) return;
+            if (!res.ok) return;
 
-            const m = res.message;
+            const msg = res.message;
             const s = res.settings || {};
 
-            // Fade effect for message change
-            if(titleEl.textContent !== (m && m.title ? m.title : '') ||
-               contentEl.textContent !== (m ? m.content : '')) {
-                titleEl.classList.add('fade');
-                contentEl.classList.add('fade');
-                setTimeout(()=>{ 
-                    titleEl.textContent = m && m.title ? m.title : '';
-                    contentEl.textContent = m ? m.content : '';
-                    titleEl.classList.remove('fade');
-                    contentEl.classList.remove('fade');
-                }, 200);
+            // Update header height
+            if (s.header_height) {
+                const newHeaderHeight = parseInt(s.header_height);
+                headerEl.style.height = newHeaderHeight + 'px';
+                headerEl.style.lineHeight = newHeaderHeight + 'px';
+                headerEl.style.fontSize = (newHeaderHeight - 20) + 'px';
+                containerEl.style.height = (<?= (int)$screenHeight ?> - newHeaderHeight) + 'px';
             }
 
-            // Apply settings
-            contentEl.style.fontSize = s.font_size ? s.font_size + "px" : "48px";
-            if(s.color) contentEl.style.color = s.color;
-            document.documentElement.dataset.theme = s.theme === 'dark' ? 'dark' : 'light';
-        }).catch(err => console.error(err));
+            // Update clock visibility
+            if (clockEl && s.clock_enabled !== undefined) {
+                clockEl.style.display = s.clock_enabled === '1' ? 'inline' : 'none';
+            }
+
+            // Only update if message changed
+            if (!msg || msg.id === currentMessageId) return;
+            currentMessageId = msg.id;
+
+            const title = msg.title || '';
+            const content = msg.content || '';
+
+            messageEl.style.opacity = 0;
+            setTimeout(() => {
+                messageTitleEl.textContent = title;
+                // remove old content node if exists
+                while(messageEl.childNodes.length > 1) messageEl.removeChild(messageEl.lastChild);
+                const contentNode = document.createTextNode(content);
+                messageEl.appendChild(contentNode);
+                fitText(messageEl);
+                messageEl.style.opacity = 1;
+            }, 300);
+        })
+        .catch(console.error);
 }
 
 // Initial load + polling every 2 seconds
 updateState();
 setInterval(updateState, 2000);
 </script>
+
 </body>
 </html>

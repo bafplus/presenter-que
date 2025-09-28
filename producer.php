@@ -8,99 +8,108 @@ if (empty($_SESSION['producer_logged'])) {
 }
 
 // Load current settings
-$stmt = $pdo->query("SELECT k, v FROM settings");
+$stmt = $pdo->query("SELECT k,v FROM settings");
 $settings = [];
 foreach ($stmt as $row) {
     $settings[$row['k']] = $row['v'];
 }
-$fontSize = $settings['font_size'] ?? '48';
-$color    = $settings['color'] ?? '#ffffff';
-$theme    = $settings['theme'] ?? 'light';
+
+// Load defaults
+$screenWidth   = $settings['screen_width'] ?? 1920;
+$screenHeight  = $settings['screen_height'] ?? 1080;
+$headerHeight  = $settings['header_height'] ?? 60;
+$clockEnabled  = $settings['clock_enabled'] ?? '1';
+$clock24h      = $settings['clock_24h'] ?? '1';
+$theme         = $settings['theme'] ?? 'light';
+$color         = $settings['color'] ?? '#ffffff';
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="<?= htmlspecialchars($theme) ?>">
 <head>
-    <meta charset="UTF-8">
-    <title>Producer Control</title>
-    <link rel="stylesheet" href="assets/style.css">
-    <style>
-        :root {
-            --bg-light: #f4f4f4;
-            --text-light: #000;
-            --bg-dark: #121212;
-            --text-dark: #f4f4f4;
-        }
-        [data-theme="light"] body { background: var(--bg-light); color: var(--text-light); }
-        [data-theme="dark"]  body { background: var(--bg-dark);  color: var(--text-dark); }
+<meta charset="UTF-8">
+<title>Producer Control</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+/* Body theme colors */
+[data-theme="light"] body {
+    background: #f0f0f0;
+    color: #000;
+}
+[data-theme="dark"] body {
+    background: #121212;
+    color: #f4f4f4;
+}
 
-        body { font-family: Arial, sans-serif; padding:20px; position: relative; }
-        h1 { margin-bottom:20px; }
+body { font-family: Arial, sans-serif; padding:20px; margin:0; }
+h1,h2 { margin-bottom:10px; }
+label { display:block; margin-bottom:8px; }
+input[type=number] { width:80px; }
+.settings-box { margin-top:20px; padding:10px; border:1px solid #ccc; border-radius:5px; }
+[data-theme="light"] .settings-box { background:#fff; color:#000; }
+[data-theme="dark"] .settings-box { background:#222; color:#f4f4f4; border-color:#444; }
 
-        #messages { list-style:none; padding:0; }
-        #messages li { background:#fff; padding:10px; margin-bottom:10px; border-radius:5px;
-                       display:flex; align-items:center; justify-content:space-between; transition: background 0.3s; }
-        [data-theme="dark"] #messages li { background:#222; }
-        #messages li.active { border: 2px solid #4CAF50; background-color: #e8f5e9; }
-        [data-theme="dark"] #messages li.active { background-color: #2c3e50; }
-        #messages span.text { flex:1; margin-right:10px; }
-
-        button { margin-left:5px; padding:6px 12px; font-size:16px; border-radius:4px; cursor:pointer; }
-        #newTitle, #newMessage { width:100%; padding:8px; font-size:16px; margin-bottom:5px; }
-
-        .settings-box { margin-top:20px; padding:10px; border:1px solid #ccc; border-radius:5px; }
-
-        /* Top-right icons */
-        .top-right {
-            position: fixed;
-            top: 15px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        .top-right button {
-            background: transparent;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: inherit;
-        }
-        .top-right button:focus { outline: none; }
-
-        @media(max-width:600px){
-            #messages li { flex-direction: column; align-items: flex-start; }
-            #messages button { margin:5px 0 0 0; width:100%; }
-        }
-    </style>
+.top-right { position: fixed; top: 15px; right: 20px; display:flex; gap:10px; }
+.top-right button { background:transparent; border:none; font-size:24px; cursor:pointer; color:inherit; }
+#messages { list-style:none; padding:0; margin-top:10px; }
+#messages li { background:#fff; padding:10px; margin-bottom:8px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; }
+[data-theme="dark"] #messages li { background:#222; }
+#messages li.active { border:2px solid #4CAF50; }
+#messages button { margin-left:5px; padding:5px 8px; font-size:16px; border-radius:4px; cursor:pointer; }
+.message-buttons { display:flex; gap:5px; }
+</style>
 </head>
 <body>
-    <!-- Top-right controls -->
-    <div class="top-right">
-        <button id="themeToggle" title="Toggle theme"><?= $theme === 'dark' ? '☀️' : '🌙' ?></button>
-        <a href="logout.php" title="Logout" style="font-size:24px; text-decoration:none; color:inherit;">🔒</a>
-    </div>
 
-    <h1>Producer Panel</h1>
+<div class="top-right">
+    <button id="themeToggle" title="Toggle theme"><?= $theme==='dark'?'☀️':'🌙' ?></button>
+    <a href="logout.php" style="font-size:24px; text-decoration:none; color:inherit;">🔒</a>
+</div>
 
-    <h2>Create / Edit Message</h2>
-    <input type="hidden" id="editId" value="">
-    <input type="text" id="newTitle" placeholder="Optional title">
-    <textarea id="newMessage" rows="3" placeholder="Enter message"></textarea><br>
-    <button id="saveMessage">Save Message</button>
+<h1>Producer Panel</h1>
 
-    <h2>Messages</h2>
-    <ul id="messages"></ul>
+<h2>Create / Edit Message</h2>
+<input type="hidden" id="editId" value="">
+<input type="text" id="newTitle" placeholder="Optional title">
+<textarea id="newMessage" rows="3" placeholder="Enter message"></textarea><br>
+<button id="saveMessage">💾 Save</button>
 
-    <div class="settings-box">
-        <h2>Presenter Settings</h2>
-        <label>
-            Font size:
-            <input type="number" id="fontSize" value="<?= htmlspecialchars($fontSize) ?>" min="10" max="200">
-        </label><br><br>
-        <label>
-            Text color:
-            <input type="color" id="textColor" value="<?= htmlspecialchars($color) ?>">
-        </label>
-    </div>
+<h2>Messages Queue</h2>
+<ul id="messages"></ul>
+
+<div class="settings-box">
+    <h2>Presenter Settings</h2>
+
+    <label>
+        Screen Width:
+        <input type="number" id="screenWidth" value="<?= htmlspecialchars($screenWidth) ?>" min="100" max="3840">
+    </label>
+
+    <label>
+        Screen Height:
+        <input type="number" id="screenHeight" value="<?= htmlspecialchars($screenHeight) ?>" min="100" max="2160">
+    </label>
+
+    <label>
+        Header Height:
+        <input type="number" id="headerHeight" value="<?= htmlspecialchars($headerHeight) ?>" min="10" max="500">
+    </label>
+
+    <label>
+        Clock Enabled:
+        <input type="checkbox" id="clockEnabled" <?= $clockEnabled==='1'?'checked':'' ?>>
+    </label>
+
+    <label>
+        24h Clock:
+        <input type="checkbox" id="clock24h" <?= $clock24h==='1'?'checked':'' ?>>
+    </label>
+
+    <label>
+        Text Color:
+        <input type="color" id="color" value="<?= htmlspecialchars($color) ?>">
+    </label>
+
+</div>
 
 <script>
 const listEl = document.getElementById('messages');
@@ -108,10 +117,16 @@ const newTitleEl = document.getElementById('newTitle');
 const newMsgEl = document.getElementById('newMessage');
 const editIdEl = document.getElementById('editId');
 const saveBtn = document.getElementById('saveMessage');
-const fontSizeEl = document.getElementById('fontSize');
-const colorEl = document.getElementById('color');
+
+const screenWidthEl  = document.getElementById('screenWidth');
+const screenHeightEl = document.getElementById('screenHeight');
+const headerHeightEl = document.getElementById('headerHeight');
+const clockEnabledEl = document.getElementById('clockEnabled');
+const clock24hEl     = document.getElementById('clock24h');
+const colorEl        = document.getElementById('color');
 const themeToggleBtn = document.getElementById('themeToggle');
 
+// Save new message
 saveBtn.onclick = () => {
     const id = editIdEl.value.trim();
     const title = newTitleEl.value.trim();
@@ -132,92 +147,100 @@ saveBtn.onclick = () => {
         }).catch(err=>alert("Network error"));
 };
 
+// Load messages
 function loadMessages(){
     fetch('api/get_messages.php')
         .then(r=>r.json())
         .then(res=>{
             if(!res.ok) return console.error(res.error);
-            listEl.innerHTML = '';
+            listEl.innerHTML='';
             res.messages.forEach(m=>{
-                const li = document.createElement('li');
-                li.className = m.is_active ? 'active' : '';
-
-                const span = document.createElement('span');
-                span.className = 'text';
-                span.textContent = m.title ? m.title + ': ' + m.content : m.content;
+                const li=document.createElement('li');
+                li.className=m.is_active?'active':'';
+                
+                const span=document.createElement('span');
+                span.textContent=m.title?m.title+': '+m.content:m.content;
                 li.appendChild(span);
 
-                const btnShowRemove = document.createElement('button');
-                if (m.is_active) {
-                    btnShowRemove.textContent = 'Remove';
-                    btnShowRemove.style.background = '#ff9800';
-                    btnShowRemove.onclick = () => setActive(null);
-                } else {
-                    btnShowRemove.textContent = 'Show';
-                    btnShowRemove.style.background = '#4CAF50';
-                    btnShowRemove.style.color = '#fff';
-                    btnShowRemove.onclick = () => setActive(m.id);
-                }
-                li.appendChild(btnShowRemove);
+                const btnContainer = document.createElement('div');
+                btnContainer.className = 'message-buttons';
 
-                const btnEdit = document.createElement('button');
-                btnEdit.textContent = 'Edit';
-                btnEdit.onclick = () => {
-                    newTitleEl.value = m.title || '';
-                    newMsgEl.value = m.content;
-                    editIdEl.value = m.id;
+                // Show/Remove
+                const btnShow=document.createElement('button');
+                btnShow.textContent=m.is_active?'❌':'▶️';
+                btnShow.onclick=()=>setActive(m.is_active?null:m.id);
+                btnContainer.appendChild(btnShow);
+
+                // Edit
+                const btnEdit=document.createElement('button');
+                btnEdit.textContent='✏️';
+                btnEdit.onclick=()=>{
+                    newTitleEl.value=m.title||'';
+                    newMsgEl.value=m.content;
+                    editIdEl.value=m.id;
                     newMsgEl.focus();
                 };
-                li.appendChild(btnEdit);
+                btnContainer.appendChild(btnEdit);
 
-                const btnDel = document.createElement('button');
-                btnDel.textContent = 'Delete';
-                btnDel.onclick = () => {
+                // Delete
+                const btnDel=document.createElement('button');
+                btnDel.textContent='🗑️';
+                btnDel.onclick=()=>{
                     if(confirm('Delete this message?')){
-                        fetch('api/delete_message.php',{
-                            method:'POST',
-                            body:new URLSearchParams({id:m.id})
-                        }).then(()=>loadMessages());
+                        fetch('api/delete_message.php',{ method:'POST', body:new URLSearchParams({id:m.id}) })
+                            .then(()=>loadMessages());
                     }
                 };
-                li.appendChild(btnDel);
+                btnContainer.appendChild(btnDel);
 
+                li.appendChild(btnContainer);
                 listEl.appendChild(li);
             });
-        }).catch(err=>console.error(err));
+        }).catch(console.error);
 }
 
+// Set active message
 function setActive(id){
     const data = new URLSearchParams();
-    if (id !== null) data.append('active_id', id);
+    if(id!==null) data.append('active_id',id);
     fetch('api/set_active.php',{ method:'POST', body:data })
-        .then(()=>loadMessages()).catch(err=>console.error(err));
+        .then(()=>loadMessages()).catch(console.error);
 }
 
+// Save settings
 function saveSettings(){
     const data = new URLSearchParams({
-        font_size: fontSizeEl.value,
+        screen_width: screenWidthEl.value,
+        screen_height: screenHeightEl.value,
+        header_height: headerHeightEl.value,
+        clock_enabled: clockEnabledEl.checked?1:0,
+        clock_24h: clock24hEl.checked?1:0,
         color: colorEl.value,
         theme: document.documentElement.dataset.theme
     });
-    fetch('api/save_settings.php',{ method:'POST', body:data }).catch(err=>console.error(err));
+    fetch('api/save_settings.php',{ method:'POST', body:data })
+        .then(r=>r.json())
+        .then(res=>{ if(!res.ok) console.error(res.error); })
+        .catch(console.error);
 }
 
-fontSizeEl.onchange = fontSizeEl.onblur = fontSizeEl.onkeydown = e => { if(e.type==='change'||e.type==='blur'||(e.key==='Enter')) saveSettings(); };
-colorEl.onchange = colorEl.onblur = saveSettings;
+// Bind changes
+[screenWidthEl, screenHeightEl, headerHeightEl, clockEnabledEl, clock24hEl, colorEl].forEach(el=>{
+    el.onchange = saveSettings;
+});
 
-themeToggleBtn.onclick = () => {
-    const current = document.documentElement.dataset.theme;
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    themeToggleBtn.textContent = next === 'dark' ? '☀️' : '🌙';
+// Theme toggle
+themeToggleBtn.onclick = ()=>{
+    const current=document.documentElement.dataset.theme;
+    const next=current==='dark'?'light':'dark';
+    document.documentElement.dataset.theme=next;
+    themeToggleBtn.textContent=next==='dark'?'☀️':'🌙';
     saveSettings();
 };
 
 loadMessages();
-setInterval(loadMessages, 15000);
+setInterval(loadMessages,15000);
 </script>
+
 </body>
 </html>
-
-
