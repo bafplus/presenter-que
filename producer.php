@@ -7,14 +7,14 @@ if (empty($_SESSION['producer_logged'])) {
     exit;
 }
 
-// Load current settings
+// Load settings
 $stmt = $pdo->query("SELECT k,v FROM settings");
 $settings = [];
 foreach ($stmt as $row) {
     $settings[$row['k']] = $row['v'];
 }
 
-// Load defaults
+// Defaults
 $screenWidth   = $settings['screen_width'] ?? 1920;
 $screenHeight  = $settings['screen_height'] ?? 1080;
 $headerHeight  = $settings['header_height'] ?? 60;
@@ -30,85 +30,107 @@ $color         = $settings['color'] ?? '#ffffff';
 <title>Producer Control</title>
 <link rel="stylesheet" href="assets/style.css">
 <style>
-/* Body theme colors */
-[data-theme="light"] body {
-    background: #f0f0f0;
-    color: #000;
+body {
+    margin:0;
+    font-family: Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
 }
-[data-theme="dark"] body {
-    background: #121212;
-    color: #f4f4f4;
+:root[data-theme="light"] { --bg: #f0f0f0; --text:#000; --card-bg:#fff; }
+:root[data-theme="dark"]  { --bg: #121212; --text:#f4f4f4; --card-bg:#222; }
+
+header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 20px;
+    background-color: var(--card-bg);
+    border-bottom: 1px solid #888;
+}
+header h1 { margin:0; font-size:1.5em; }
+
+header button, header a {
+    background:transparent;
+    border:none;
+    font-size:24px;
+    cursor:pointer;
+    color:inherit;
+    text-decoration:none;
 }
 
-body { font-family: Arial, sans-serif; padding:20px; margin:0; }
-h1,h2 { margin-bottom:10px; }
-label { display:block; margin-bottom:8px; }
-input[type=number] { width:80px; }
-.settings-box { margin-top:20px; padding:10px; border:1px solid #ccc; border-radius:5px; }
-[data-theme="light"] .settings-box { background:#fff; color:#000; }
-[data-theme="dark"] .settings-box { background:#222; color:#f4f4f4; border-color:#444; }
+.main-container {
+    display:flex;
+    height: calc(100vh - 60px); /* adjust for header */
+}
 
-.top-right { position: fixed; top: 15px; right: 20px; display:flex; gap:10px; }
-.top-right button { background:transparent; border:none; font-size:24px; cursor:pointer; color:inherit; }
-#messages { list-style:none; padding:0; margin-top:10px; }
-#messages li { background:#fff; padding:10px; margin-bottom:8px; border-radius:5px; display:flex; justify-content:space-between; align-items:center; }
-[data-theme="dark"] #messages li { background:#222; }
+/* Columns */
+.column { flex:1; display:flex; flex-direction:column; padding:10px; }
+.middle-column { flex:2; display:flex; flex-direction:column; }
+.right-column { flex:1; }
+
+#messagesContainer { flex:1; overflow-y:auto; margin-bottom:10px; background-color: var(--card-bg); border-radius:5px; padding:5px; }
+#messages { list-style:none; padding:0; margin:0; }
+#messages li {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background-color: var(--card-bg);
+    margin-bottom:5px;
+    padding:5px 10px;
+    border-radius:4px;
+}
 #messages li.active { border:2px solid #4CAF50; }
-#messages button { margin-left:5px; padding:5px 8px; font-size:16px; border-radius:4px; cursor:pointer; }
-.message-buttons { display:flex; gap:5px; }
+#messages li span { flex:1; margin-right:10px; }
+
+#newMessageBox input, #newMessageBox textarea, #newMessageBox button { margin-bottom:5px; }
+#newMessageBox button { padding:5px 10px; font-size:16px; border-radius:4px; cursor:pointer; }
+
+.settings-box { background-color: var(--card-bg); padding:10px; border-radius:5px; height:100%; overflow:auto; }
+
 </style>
 </head>
 <body>
 
-<div class="top-right">
-    <button id="themeToggle" title="Toggle theme"><?= $theme==='dark'?'☀️':'🌙' ?></button>
-    <a href="logout.php" style="font-size:24px; text-decoration:none; color:inherit;">🔒</a>
-</div>
+<header>
+    <h1>Producer Control</h1>
+    <div>
+        <button id="themeToggle"><?= $theme==='dark'?'☀️':'🌙' ?></button>
+        <a href="logout.php">🔒</a>
+    </div>
+</header>
 
-<h1>Producer Panel</h1>
+<div class="main-container">
+    <div class="column left-column">
+        <!-- Empty for now -->
+    </div>
 
-<h2>Create / Edit Message</h2>
-<input type="hidden" id="editId" value="">
-<input type="text" id="newTitle" placeholder="Optional title">
-<textarea id="newMessage" rows="3" placeholder="Enter message"></textarea><br>
-<button id="saveMessage">💾 Save</button>
+    <div class="column middle-column">
+        <h2>Messages Queue</h2>
+        <div id="messagesContainer">
+            <ul id="messages"></ul>
+        </div>
 
-<h2>Messages Queue</h2>
-<ul id="messages"></ul>
+        <div id="newMessageBox">
+            <h2>Create / Edit Message</h2>
+            <input type="hidden" id="editId" value="">
+            <input type="text" id="newTitle" placeholder="Optional title">
+            <textarea id="newMessage" rows="3" placeholder="Enter message"></textarea>
+            <button id="saveMessage">💾 Save</button>
+        </div>
+    </div>
 
-<div class="settings-box">
-    <h2>Presenter Settings</h2>
+    <div class="column right-column">
+        <div class="settings-box">
+            <h2>Presenter Settings</h2>
 
-    <label>
-        Screen Width:
-        <input type="number" id="screenWidth" value="<?= htmlspecialchars($screenWidth) ?>" min="100" max="3840">
-    </label>
-
-    <label>
-        Screen Height:
-        <input type="number" id="screenHeight" value="<?= htmlspecialchars($screenHeight) ?>" min="100" max="2160">
-    </label>
-
-    <label>
-        Header Height:
-        <input type="number" id="headerHeight" value="<?= htmlspecialchars($headerHeight) ?>" min="10" max="500">
-    </label>
-
-    <label>
-        Clock Enabled:
-        <input type="checkbox" id="clockEnabled" <?= $clockEnabled==='1'?'checked':'' ?>>
-    </label>
-
-    <label>
-        24h Clock:
-        <input type="checkbox" id="clock24h" <?= $clock24h==='1'?'checked':'' ?>>
-    </label>
-
-    <label>
-        Text Color:
-        <input type="color" id="color" value="<?= htmlspecialchars($color) ?>">
-    </label>
-
+            <label>Screen Width: <input type="number" id="screenWidth" value="<?= htmlspecialchars($screenWidth) ?>" min="100" max="3840"></label>
+            <label>Screen Height: <input type="number" id="screenHeight" value="<?= htmlspecialchars($screenHeight) ?>" min="100" max="2160"></label>
+            <label>Header Height: <input type="number" id="headerHeight" value="<?= htmlspecialchars($headerHeight) ?>" min="10" max="500"></label>
+            <label>Clock Enabled: <input type="checkbox" id="clockEnabled" <?= $clockEnabled==='1'?'checked':'' ?>></label>
+            <label>24h Clock: <input type="checkbox" id="clock24h" <?= $clock24h==='1'?'checked':'' ?>></label>
+            <label>Text Color: <input type="color" id="color" value="<?= htmlspecialchars($color) ?>"></label>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -157,21 +179,15 @@ function loadMessages(){
             res.messages.forEach(m=>{
                 const li=document.createElement('li');
                 li.className=m.is_active?'active':'';
-                
                 const span=document.createElement('span');
                 span.textContent=m.title?m.title+': '+m.content:m.content;
                 li.appendChild(span);
 
-                const btnContainer = document.createElement('div');
-                btnContainer.className = 'message-buttons';
-
-                // Show/Remove
                 const btnShow=document.createElement('button');
                 btnShow.textContent=m.is_active?'❌':'▶️';
                 btnShow.onclick=()=>setActive(m.is_active?null:m.id);
-                btnContainer.appendChild(btnShow);
+                li.appendChild(btnShow);
 
-                // Edit
                 const btnEdit=document.createElement('button');
                 btnEdit.textContent='✏️';
                 btnEdit.onclick=()=>{
@@ -180,9 +196,8 @@ function loadMessages(){
                     editIdEl.value=m.id;
                     newMsgEl.focus();
                 };
-                btnContainer.appendChild(btnEdit);
+                li.appendChild(btnEdit);
 
-                // Delete
                 const btnDel=document.createElement('button');
                 btnDel.textContent='🗑️';
                 btnDel.onclick=()=>{
@@ -191,9 +206,8 @@ function loadMessages(){
                             .then(()=>loadMessages());
                     }
                 };
-                btnContainer.appendChild(btnDel);
+                li.appendChild(btnDel);
 
-                li.appendChild(btnContainer);
                 listEl.appendChild(li);
             });
         }).catch(console.error);
