@@ -71,14 +71,26 @@ const containerEl = document.getElementById('messageContainer');
 const headerEl = document.getElementById('header');
 const clockEl = document.getElementById('clock');
 
+// Use 24h or 12h based on settings
+let use24h = <?= $clock24h==='1' ? 'true' : 'false' ?>;
+
 // Clock update
 function updateClock(){
     if(!clockEl) return;
     const d = new Date();
-    const hh = d.getHours().toString().padStart(2,'0');
+    let hh = d.getHours();
     const mm = d.getMinutes().toString().padStart(2,'0');
     const ss = d.getSeconds().toString().padStart(2,'0');
-    clockEl.textContent = hh + ":" + mm + ":" + ss;
+    let ampm = '';
+
+    if(!use24h){
+        ampm = hh >= 12 ? ' PM' : ' AM';
+        hh = hh % 12;
+        if(hh === 0) hh = 12;
+    }
+
+    hh = hh.toString().padStart(2,'0');
+    clockEl.textContent = hh + ":" + mm + ":" + ss + ampm;
 }
 setInterval(updateClock,1000);
 updateClock();
@@ -119,13 +131,24 @@ function updateState() {
                 containerEl.style.height = (<?= (int)$screenHeight ?> - newHeaderHeight) + 'px';
             }
 
-            // Update clock visibility
+            // Update clock visibility and 24h setting dynamically
             if (clockEl && s.clock_enabled !== undefined) {
                 clockEl.style.display = s.clock_enabled === '1' ? 'inline' : 'none';
             }
+            if (s.clock_24h !== undefined) {
+                use24h = s.clock_24h === '1';
+            }
+
+            // CLEAR if no active message
+            if (!msg) {
+                currentMessageId = null;
+                messageTitleEl.textContent = '';
+                while(messageEl.childNodes.length > 1) messageEl.removeChild(messageEl.lastChild);
+                return;
+            }
 
             // Only update if message changed
-            if (!msg || msg.id === currentMessageId) return;
+            if (msg.id === currentMessageId) return;
             currentMessageId = msg.id;
 
             const title = msg.title || '';
@@ -134,7 +157,6 @@ function updateState() {
             messageEl.style.opacity = 0;
             setTimeout(() => {
                 messageTitleEl.textContent = title;
-                // remove old content node if exists
                 while(messageEl.childNodes.length > 1) messageEl.removeChild(messageEl.lastChild);
                 const contentNode = document.createTextNode(content);
                 messageEl.appendChild(contentNode);
