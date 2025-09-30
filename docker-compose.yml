@@ -11,7 +11,7 @@ services:
     depends_on:
       - db
     volumes:
-      - .:/var/www/html  # optional for development
+      - .:/var/www/html
     restart: always
 
   db:
