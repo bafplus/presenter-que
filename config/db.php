@@ -1,9 +1,8 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php'; // adjust path to your vendor folder
+require_once __DIR__ . '/../vendor/autoload.php'; // adjust path if needed
 
-// Load environment variables from .env if available
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../'); // root of project
-$dotenv->safeLoad(); // won't fail if .env is missing
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->safeLoad();
 
 $CONFIG = [
     'db_host' => $_ENV['DB_HOST'] ?? '127.0.0.1',
@@ -24,3 +23,4 @@ try {
     echo json_encode(['error' => 'DB connection failed', 'message' => $e->getMessage()]);
     exit;
 }
+
