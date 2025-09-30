@@ -1,18 +1,16 @@
-version: "3.9"
-
 services:
   db:
     image: mariadb:10.6
     container_name: presenter-que-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: live_presenter
-      MYSQL_USER: your_db_user
-      MYSQL_PASSWORD: your_db_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -23,10 +21,11 @@ services:
     ports:
       - "8080:80"
     environment:
-      DB_HOST: db
-      DB_NAME: live_presenter
-      DB_USER: your_db_user
-      DB_PASS: your_db_password
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      PRODUCER_PASSWORD: ${PRODUCER_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -46,4 +45,5 @@ services:
 
 volumes:
   db_data:
+
 
