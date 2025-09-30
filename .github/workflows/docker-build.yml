@@ -34,5 +34,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            yourname/presenter-que:latest
-            yourname/presenter-que:${{ env.COMMIT_SHA }}
+            bafplus/presenter-que:latest
+            bafplus/presenter-que:${{ env.COMMIT_SHA }}
