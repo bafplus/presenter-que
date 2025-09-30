@@ -10,10 +10,18 @@ echo "DB_NAME=$DB_NAME"
 echo "DB_USER=$DB_USER"
 echo "DB_PASS=$DB_PASS"
 
-# Wait until MariaDB is ready (using app user)
+# Wait until MariaDB is ready (app user)
+MAX_RETRIES=30
+COUNT=0
+
 echo "Waiting for MariaDB at $DB_HOST..."
 until mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" --skip-ssl -e "SELECT 1;" &>/dev/null; do
-    echo "MariaDB not ready yet..."
+    COUNT=$((COUNT + 1))
+    echo "MariaDB not ready yet... attempt $COUNT/$MAX_RETRIES"
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
+        echo "Error: MariaDB did not become ready in time."
+        exit 1
+    fi
     sleep 2
 done
 
@@ -30,7 +38,6 @@ if [ -f /var/www/html/database.sql ]; then
     fi
 fi
 
-# Start Supervisor (runs Apache + any other services)
+# Start Supervisor (runs Apache + other services)
 echo "Starting Supervisor..."
 exec /usr/bin/supervisord -n
-
