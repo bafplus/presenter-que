@@ -15,7 +15,7 @@ RUN rm -rf /var/www/html/* && \
     git clone https://github.com/bafplus/presenter-que.git /var/www/html
 
 # Copy Docker support files
-COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY init-db.sh /init-db.sh
 RUN chmod +x /init-db.sh
 
