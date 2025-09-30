@@ -1,37 +1,33 @@
 FROM php:8.2-apache
 
-# Install MariaDB + tools + Supervisor
+# Install system dependencies + PHP extensions
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        mariadb-server \
-        mariadb-client \
-        git \
-        supervisor && \
+        mariadb-client git supervisor unzip && \
     docker-php-ext-install mysqli pdo pdo_mysql && \
     rm -rf /var/lib/apt/lists/*
 
-# Clone the repo
-RUN rm -rf /var/www/html/* && \
-    git clone https://github.com/bafplus/presenter-que.git /var/www/html
-
+# Set workdir
 WORKDIR /var/www/html
 
-# Install Composer
+# Copy app source
+COPY . /var/www/html
+
+# Install Composer (copy binary from official image)
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy composer.json and install dependencies
-COPY composer.json composer.lock* ./
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Copy Docker support files
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Copy init script and Supervisor config
 COPY init-db.sh /init-db.sh
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN chmod +x /init-db.sh
 
-# Copy .env
-COPY .env /var/www/html/.env
-
 EXPOSE 80
+
+ENTRYPOINT ["/init-db.sh"]
+
 
 # Entrypoint
 ENTRYPOINT ["/init-db.sh"]
