@@ -1,0 +1,12 @@
+{
+  "name": "bafplus/presenter-que",
+  "description": "Presenter Que web application",
+  "require": {
+    "vlucas/phpdotenv": "^5.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}
