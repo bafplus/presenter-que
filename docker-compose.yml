@@ -30,5 +30,18 @@ services:
       - db_data:/var/lib/mysql
     restart: always
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5
+    container_name: presenter-que-pma
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASS}
+    depends_on:
+      - db
+    ports:
+      - "8081:80"
+    restart: always
+
 volumes:
   db_data:
