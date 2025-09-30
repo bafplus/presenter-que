@@ -10,14 +10,17 @@ RUN apt-get update && \
     docker-php-ext-install mysqli pdo pdo_mysql && \
     rm -rf /var/lib/apt/lists/*
 
-# Clone the repo (always latest main) into Apache's docroot
+# Clone the repo into Apache docroot
 RUN rm -rf /var/www/html/* && \
     git clone https://github.com/bafplus/presenter-que.git /var/www/html
 
 # Copy Docker support files
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY docker/init-db.sh /init-db.sh
+COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY init-db.sh /init-db.sh
 RUN chmod +x /init-db.sh
+
+# Copy .env into container so PHP and init script can read it
+COPY .env /var/www/html/.env
 
 EXPOSE 80
 
