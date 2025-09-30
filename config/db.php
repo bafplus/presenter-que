@@ -1,10 +1,16 @@
 <?php
+require_once __DIR__ . '/../vendor/autoload.php'; // adjust path to your vendor folder
+
+// Load environment variables from .env if available
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../'); // root of project
+$dotenv->safeLoad(); // won't fail if .env is missing
+
 $CONFIG = [
-    'db_host' => '127.0.0.1',
-    'db_name' => 'live_presenter',
-    'db_user' => 'your_db_user',
-    'db_pass' => 'your_db_password',
-    'producer_password' => 'changeme'
+    'db_host' => $_ENV['DB_HOST'] ?? '127.0.0.1',
+    'db_name' => $_ENV['DB_NAME'] ?? 'live_presenter',
+    'db_user' => $_ENV['DB_USER'] ?? 'your_db_user',
+    'db_pass' => $_ENV['DB_PASS'] ?? 'your_db_password',
+    'producer_password' => $_ENV['PRODUCER_PASSWORD'] ?? 'changeme',
 ];
 
 try {
@@ -15,6 +21,6 @@ try {
     ]);
 } catch (Exception $e) {
     header('Content-Type: application/json', true, 500);
-    echo json_encode(['error' => 'DB connection failed', 'message'=>$e->getMessage()]);
+    echo json_encode(['error' => 'DB connection failed', 'message' => $e->getMessage()]);
     exit;
 }
