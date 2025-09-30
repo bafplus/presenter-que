@@ -14,6 +14,14 @@ RUN apt-get update && \
 RUN rm -rf /var/www/html/* && \
     git clone https://github.com/bafplus/presenter-que.git /var/www/html
 
+WORKDIR /var/www/html
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Install PHP dependencies (includes vlucas/phpdotenv)
+RUN composer install --no-dev --optimize-autoloader
+
 # Copy Docker support files
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY init-db.sh /init-db.sh
@@ -24,4 +32,6 @@ COPY .env /var/www/html/.env
 
 EXPOSE 80
 
+# Run init-db.sh as entrypoint (initializes DB + starts Supervisor)
 ENTRYPOINT ["/init-db.sh"]
+
