@@ -19,9 +19,11 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Copy Supervisor config and make init script executable
+# Ensure init-db.sh is executable
+RUN chmod +x /var/www/html/init-db.sh && chown www-data:www-data /var/www/html/init-db.sh
+
+# Copy Supervisor config
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-RUN chmod +x /var/www/html/init-db.sh
 
 EXPOSE 80
 
