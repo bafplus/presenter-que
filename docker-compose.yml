@@ -2,13 +2,36 @@ version: "3.8"
 
 services:
   app:
-    build: .
+    image: bafplus/presenter-que:latest
+    container_name: presenter-que
     ports:
       - "8080:80"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - .:/var/www/html  # optional for development
+    restart: always
+
+  db:
+    image: mysql:8.0
+    container_name: presenter-que-db
+    env_file:
+      - .env
+    environment:
+      # MySQL requires specific variable names
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-    container_name: presenter-que
+    restart: always
 
 volumes:
   db_data:
+
 
