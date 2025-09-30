@@ -1,1 +1,368 @@
-body{font-family:Arial;}
+/* ================
+   Base & Theme
+=================== */
+:root {
+  --primary: #4cafef;
+  --success: #4caf50;
+  --danger: #e74c3c;
+  --warning: #f1c40f;
+  --radius: 8px;
+  --transition: 0.25s ease;
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f6fa;
+  --text: #2c3e50;
+  --card-bg: #ffffff;
+  --border-color: #dcdde1;
+}
+
+:root[data-theme="dark"] {
+  --bg: #18191a;
+  --text: #f5f6fa;
+  --card-bg: #242526;
+  --border-color: #3a3b3c;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ================
+   Header
+=================== */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+header button,
+header a {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text);
+  margin-left: 10px;
+  transition: transform var(--transition);
+}
+
+header button:hover,
+header a:hover {
+  transform: scale(1.15);
+}
+
+/* ================
+   Layout
+=================== */
+.main-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 16px;
+  height: calc(100vh - 70px);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  overflow: hidden;
+}
+
+/* Responsive grid */
+@media (max-width: 1200px) {
+  .main-container {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .main-container {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+/* ================
+   Scroll containers
+=================== */
+.column > div[style*="overflow-y"],
+#messagesContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar */
+.column::-webkit-scrollbar,
+#messagesContainer::-webkit-scrollbar {
+  width: 6px;
+}
+.column::-webkit-scrollbar-thumb,
+#messagesContainer::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+/* ================
+   Lists
+=================== */
+#messages,
+#youtubeChatMessages {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#messages li,
+#youtubeChatMessages li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  transition: background var(--transition);
+}
+
+#messages li.active {
+  border-color: var(--success);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+#messages li span,
+#youtubeChatMessages li span {
+  flex: 1;
+  font-size: 0.95rem;
+  margin-right: 10px;
+  word-break: break-word;
+}
+
+#messages li button,
+#youtubeChatMessages li button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  transition: transform var(--transition);
+}
+
+#messages li button:hover,
+#youtubeChatMessages li button:hover {
+  transform: scale(1.2);
+}
+
+/* ================
+   Forms
+=================== */
+input,
+textarea,
+select,
+button.save-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 1rem;
+  transition: border var(--transition), background var(--transition);
+}
+
+textarea {
+  resize: vertical;
+}
+
+button.save-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button.save-btn:hover {
+  background: #379ce6;
+}
+
+/* ================
+   Preview & Settings
+=================== */
+.preview-container,
+.settings-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.preview-header button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  margin-left: 8px;
+}
+
+/* Responsive iframe wrapper */
+.presenter-frame-wrapper,
+.youtube-frame-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.presenter-frame-inner iframe,
+.youtube-frame-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ================
+   Popups
+=================== */
+.popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.popup-content {
+  background: var(--card-bg);
+  color: var(--text);
+  padding: 20px;
+  border-radius: var(--radius);
+  max-width: 480px;
+  width: 100%;
+}
+
+.popup-content h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.popup-content button {
+  width: auto;
+  margin-top: 10px;
+}
+
+/* Buttons inside popups */
+.popup-content input[type="color"] {
+  padding: 4px;
+  height: 40px;
+}
+
+/* =========================
+   Modern Button Styles
+   (applies to all <button>)
+========================= */
+button {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--border-color);
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.1s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+button:hover {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+/* Primary action buttons (e.g. Save) */
+button.primary {
+  background: #4cafef;
+  color: #fff;
+}
+
+button.primary:hover {
+  background: #379ce6;
+  color: #fff;
+}
+
+/* Success / Danger utility (optional) */
+button.success { background: #4caf50; color: #fff; }
+button.success:hover { background: #3ea742; }
+button.danger { background: #e74c3c; color: #fff; }
+button.danger:hover { background: #cf3e2e; }
+
+/* Icon-only buttons (header + small controls) */
+header button,
+#messages li button,
+#youtubeChatMessages li button,
+.preview-header button {
+  padding: 6px 10px;
+  font-size: 18px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+}
+
+header button:hover,
+#messages li button:hover,
+#youtubeChatMessages li button:hover,
+.preview-header button:hover {
+  background: var(--border-color);
+  color: var(--text);
+}
+
