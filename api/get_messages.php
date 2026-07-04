@@ -12,7 +12,7 @@ if (empty($_SESSION['producer_logged'])) {
 
 try {
     // Get all messages
-    $stmt = $pdo->query("SELECT id, title, content FROM messages ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT id, title, content, created_at, updated_at FROM messages ORDER BY id DESC");
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get active message

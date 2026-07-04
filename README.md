@@ -21,7 +21,8 @@ All messages and settings are stored in **MySQL**.
 - Access `producer.php` for the producer panel and `presenter.php` for the presenter screen.
 
 3. **Login for Producer Panel**:
-- The login system uses sessions. Check `login.php` for credentials or adjust as needed.
+   - Default password: `changeme` (configurable via `PRODUCER_PASSWORD` in `.env`)
+   - Access `producer.php` after logging in via `login.php`
 
 ---
 

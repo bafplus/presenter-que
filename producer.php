@@ -80,7 +80,8 @@ textarea { resize:vertical; }
 
 /* Chat */
 #youtubeChatMessages { list-style:none; margin:0; padding:0; }
-#youtubeChatMessages li { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border-color); }
+#youtubeChatMessages li { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border-color); transition: background 0.5s ease; }
+#youtubeChatMessages li.chat-new { background: linear-gradient(90deg, rgba(76,175,239,0.15) 0%, transparent 80%); border-left: 3px solid rgba(76,175,239,0.6); }
 #youtubeChatMessages li span { flex:1; }
 #youtubeChatMessages li button { margin-left:8px; font-size:16px; cursor:pointer; }
 </style>
@@ -98,9 +99,16 @@ textarea { resize:vertical; }
 
 <div class="main-container">
     <div class="column left-column">
-        <h2>YouTube Live Chat</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>YouTube Live Chat</h2>
+            <button id="chatSortToggle" style="font-size:14px; padding:4px 10px;">⬆ Newest</button>
+        </div>
         <div style="flex:1;overflow-y:auto;background:var(--card-bg);border-radius:5px;padding:5px;">
             <ul id="youtubeChatMessages"></ul>
+        </div>
+        <div id="chatLastCheck" style="font-size:11px; opacity:0.55; padding:2px 8px;"></div>
+        <div id="chatCountdownBar" style="height:3px; background:var(--border-color); border-radius:2px; margin:0 8px 4px; overflow:hidden;">
+            <div id="chatCountdownFill" style="height:100%; width:100%; background:var(--primary,#4cafef); transition:width 0.5s linear;"></div>
         </div>
         <button id="openYoutubeApiSettings">⚙️ API Key</button>
     </div>
@@ -108,7 +116,10 @@ textarea { resize:vertical; }
     <div class="resizer" id="resizerLeft"></div>
 
     <div class="column middle-column">
-        <h2>Messages Queue</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Messages Queue</h2>
+            <button id="sortToggle" style="font-size:14px; padding:4px 10px;">⬆ Newest</button>
+        </div>
         <div id="messagesContainer">
             <ul id="messages"></ul>
         </div>
@@ -217,7 +228,10 @@ document.getElementById('openSettingsPopup').onclick = ()=>openPopup('settingsPo
 document.getElementById('closeSettingsPopup').onclick = ()=>closePopup('settingsPopup');
 document.getElementById('openYoutubeSettings').onclick = ()=>openPopup('youtubeSettingsPopup');
 document.getElementById('closeYoutubeSettings').onclick = ()=>closePopup('youtubeSettingsPopup');
-document.getElementById('openYoutubeApiSettings').onclick = ()=>openPopup('youtubeApiSettingsPopup');
+document.getElementById('openYoutubeApiSettings').onclick = ()=>{
+    document.getElementById('youtubeApiKey').value = localStorage.getItem('youtubeApiKey') || '';
+    openPopup('youtubeApiSettingsPopup');
+};
 document.getElementById('closeYoutubeApiSettings').onclick = ()=>closePopup('youtubeApiSettingsPopup');
 
 // === Fullscreen toggle ===
@@ -243,18 +257,29 @@ saveBtn.onclick = () => {
         }).catch(()=>alert("Network error"));
 };
 
+// === Sort toggle ===
+let sortAscending = false;
+document.getElementById('sortToggle').onclick = ()=>{
+    sortAscending = !sortAscending;
+    document.getElementById('sortToggle').textContent = sortAscending ? '⬇ Oldest' : '⬆ Newest';
+    loadMessages();
+};
+
 // === Load messages ===
 function loadMessages(){
     fetch('api/get_messages.php')
         .then(r=>r.json())
         .then(res=>{
             if(!res.ok) return console.error(res.error);
+            const msgs = res.messages || [];
+            if (sortAscending) msgs.reverse();
             listEl.innerHTML='';
-            res.messages.forEach(m=>{
+            msgs.forEach(m=>{
                 const li=document.createElement('li');
                 li.className=m.is_active?'active':'';
                 const span=document.createElement('span');
-                span.textContent=m.title?m.title+': '+m.content:m.content;
+                const time = m.created_at ? new Date(m.created_at.replace(' ', 'T')+'Z').toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+                span.innerHTML = (m.title?'<b>'+m.title+'</b>: ':'') + m.content + (time?' <small>('+time+')</small>':'');
                 li.appendChild(span);
 
                 const btnShow=document.createElement('button');
@@ -371,6 +396,44 @@ document.getElementById('refreshYoutube').onclick=loadYoutubeVideo;
 
 // === YouTube Chat ===
 let nextPageToken='';
+let chatSortAscending = false;
+let lastPollTime = Date.now();
+
+// Persistent queue status voor chatberichten
+function getQueuedIds(){
+    try{ return new Set(JSON.parse(localStorage.getItem('queuedChatIds')||'[]')); }
+    catch(e){ return new Set(); }
+}
+function saveQueuedId(id){
+    const ids = new Set(JSON.parse(localStorage.getItem('queuedChatIds')||'[]'));
+    ids.add(id);
+    localStorage.setItem('queuedChatIds', JSON.stringify([...ids]));
+}
+
+// Countdown bar updater
+function updateChatCountdown(){
+    const fill = document.getElementById('chatCountdownFill');
+    if (!fill) return;
+    const elapsed = Date.now() - lastPollTime;
+    const pct = Math.max(0, 100 - (elapsed / 30000) * 100);
+    fill.style.width = pct + '%';
+}
+setInterval(updateChatCountdown, 500);
+document.getElementById('chatSortToggle').onclick = ()=>{
+    chatSortAscending = !chatSortAscending;
+    document.getElementById('chatSortToggle').textContent = chatSortAscending ? '⬇ Oldest' : '⬆ Newest';
+    sortChat();
+};
+function sortChat(){
+    const ul = document.getElementById('youtubeChatMessages');
+    const items = Array.from(ul.children);
+    items.sort((a,b) => {
+        const tA = parseInt(a.dataset.time) || 0;
+        const tB = parseInt(b.dataset.time) || 0;
+        return chatSortAscending ? tA - tB : tB - tA;
+    });
+    items.forEach(li => ul.appendChild(li));
+}
 function loadYoutubeChat(){
     const apiKey=localStorage.getItem('youtubeApiKey');
     const url=localStorage.getItem('youtubeUrl');
@@ -386,26 +449,43 @@ function loadYoutubeChat(){
     }).catch(console.error);
 }
 function pollChat(chatId,apiKey){
-    fetch(`https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${chatId}&part=snippet,authorDetails&key=${apiKey}${nextPageToken?`&pageToken=${nextPageToken}`:''}`)
+    fetch(`https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${chatId}&part=snippet,authorDetails&key=${apiKey}&pageToken=${nextPageToken}`)
     .then(r=>r.json())
     .then(data=>{
         nextPageToken=data.nextPageToken||'';
+        lastPollTime = Date.now();
         const ul=document.getElementById('youtubeChatMessages');
+        // Markeer vorige nieuwe items als gelezen
+        ul.querySelectorAll('.chat-new').forEach(el => el.classList.remove('chat-new'));
+        const checkEl = document.getElementById('chatLastCheck');
+        if (checkEl) checkEl.textContent = 'last check: ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
         data.items.forEach(item=>{
             const li=document.createElement('li');
+            li.className = 'chat-new';
+            li.dataset.time = item.snippet?.publishedAt ? new Date(item.snippet.publishedAt).getTime() : Date.now();
             const msg=document.createElement('span');
-            msg.textContent=`${item.authorDetails.displayName}: ${item.snippet.displayMessage}`;
+            const chatTime = item.snippet?.publishedAt ? new Date(item.snippet.publishedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+            msg.innerHTML = `<b>${item.authorDetails.displayName}:</b> ${item.snippet.displayMessage} <small>(${chatTime})</small>`;
             li.appendChild(msg);
             const btn=document.createElement('button');
-            btn.textContent='➕';
-            btn.onclick=()=>{
+            const queuedIds = getQueuedIds();
+            const isQueued = queuedIds.has(item.id);
+            btn.textContent = isQueued ? '✅' : '➕';
+            btn.style.color = isQueued ? '#4caf50' : '';
+            btn.onclick = isQueued ? null : ()=>{
                 const params=new URLSearchParams({ title:item.authorDetails.displayName, content:item.snippet.displayMessage });
-                fetch('api/save_message.php',{ method:'POST', body:params }).then(()=>loadMessages());
+                fetch('api/save_message.php',{ method:'POST', body:params }).then(()=>{
+                    loadMessages();
+                    saveQueuedId(item.id);
+                    btn.textContent='✅';
+                    btn.style.color='#4caf50';
+                });
             };
             li.appendChild(btn);
             ul.appendChild(li);
         });
-        const timeout=data.pollingIntervalMillis||5000;
+        sortChat();
+        const timeout = 30000;
         setTimeout(()=>pollChat(chatId,apiKey), timeout);
     }).catch(console.error);
 }
