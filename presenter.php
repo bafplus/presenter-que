@@ -23,8 +23,24 @@ $theme         = $settings['theme'] ?? 'light';
 <meta charset="UTF-8">
 <title>Presenter Screen</title>
 <style>
-body { margin:0; background:#000; color:<?= htmlspecialchars($color) ?>; font-family:Arial, sans-serif; }
-#container { width:<?= (int)$screenWidth ?>px; height:<?= (int)$screenHeight ?>px; margin:auto; display:flex; flex-direction:column; }
+/* Full viewport fill, capped at 1920×1080 for big screens */
+html, body { width:100%; height:100%; overflow:hidden; margin:0; }
+body { 
+    background:#000; 
+    color:<?= htmlspecialchars($color) ?>; 
+    font-family:Arial, sans-serif; 
+    display:flex; 
+    align-items:center; 
+    justify-content:center; 
+}
+#container { 
+    width:100vw; 
+    height:100vh; 
+    max-width:1920px; 
+    max-height:1080px; 
+    display:flex; 
+    flex-direction:column; 
+}
 #header { 
     height: <?= (int)$headerHeight ?>px; 
     line-height: <?= (int)$headerHeight ?>px; 
@@ -36,6 +52,7 @@ body { margin:0; background:#000; color:<?= htmlspecialchars($color) ?>; font-fa
     align-items:center; 
     justify-content:space-between; 
     overflow:hidden; 
+    flex-shrink:0;
 }
 #fsBtn {
     cursor: pointer;
@@ -62,10 +79,6 @@ body { margin:0; background:#000; color:<?= htmlspecialchars($color) ?>; font-fa
     overflow:hidden; 
 }
 
-/* Responsive scaling: container scales down to fit viewport */
-html, body { width:100%; height:100%; overflow:hidden; }
-body { display:flex; align-items:center; justify-content:center; }
-#container { transform-origin: center center; }
 #messageText { display:inline-block; word-wrap:break-word; transition: opacity 0.3s ease; white-space: pre-wrap; }
 #messageTitle { font-weight:bold; display:block; margin-bottom:10px; }
 </style>
@@ -179,22 +192,6 @@ document.addEventListener('webkitfullscreenchange', () => {
 });
 // ── End Fullscreen ──
 
-// ── Responsive scaling: fit container within viewport ──
-const container = document.getElementById('container');
-
-function fitToViewport() {
-    const cw = container.offsetWidth;
-    const ch = container.offsetHeight;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const scale = Math.min(vw / cw, vh / ch, 1); // never scale UP beyond 1×
-    container.style.transform = `scale(${scale})`;
-}
-
-window.addEventListener('resize', fitToViewport);
-fitToViewport();
-// ── End Scaling ──
-
 // Fit message text inside container
 function fitText(el){
     const containerHeight = containerEl.clientHeight;
@@ -228,7 +225,7 @@ function updateState() {
                 headerEl.style.height = newHeaderHeight + 'px';
                 headerEl.style.lineHeight = newHeaderHeight + 'px';
                 headerEl.style.fontSize = (newHeaderHeight - 20) + 'px';
-                containerEl.style.height = (<?= (int)$screenHeight ?> - newHeaderHeight) + 'px';
+                containerEl.style.height = 'calc(100vh - ' + newHeaderHeight + 'px)';
             }
 
             // Update clock visibility and 24h setting dynamically
