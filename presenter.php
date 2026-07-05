@@ -95,6 +95,35 @@ function updateClock(){
 setInterval(updateClock,1000);
 updateClock();
 
+// ── Screen Wake Lock: keep iPad screen on ──
+let wakeLock = null;
+
+async function requestWakeLock() {
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {
+        // Wake Lock not supported or denied — silently ignore
+    }
+}
+
+// Re-acquire when page becomes visible again (user switches back)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !wakeLock) {
+        requestWakeLock();
+    }
+});
+
+// Re-acquire when released (e.g. by OS) or page visibility changes
+if (navigator.wakeLock) {
+    requestWakeLock();
+
+    // Safety net: check every 30s in case wake lock gets released
+    setInterval(() => {
+        if (!wakeLock) requestWakeLock();
+    }, 30000);
+}
+// ── End Wake Lock ──
+
 // Fit message text inside container
 function fitText(el){
     const containerHeight = containerEl.clientHeight;
