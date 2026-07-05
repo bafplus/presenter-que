@@ -61,6 +61,11 @@ body { margin:0; background:#000; color:<?= htmlspecialchars($color) ?>; font-fa
     text-align:center; 
     overflow:hidden; 
 }
+
+/* Responsive scaling: container scales down to fit viewport */
+html, body { width:100%; height:100%; overflow:hidden; }
+body { display:flex; align-items:center; justify-content:center; }
+#container { transform-origin: center center; }
 #messageText { display:inline-block; word-wrap:break-word; transition: opacity 0.3s ease; white-space: pre-wrap; }
 #messageTitle { font-weight:bold; display:block; margin-bottom:10px; }
 </style>
@@ -173,6 +178,22 @@ document.addEventListener('webkitfullscreenchange', () => {
     fsIcon.setAttribute('d', getFsIconPath(isFullscreen()));
 });
 // ── End Fullscreen ──
+
+// ── Responsive scaling: fit container within viewport ──
+const container = document.getElementById('container');
+
+function fitToViewport() {
+    const cw = container.offsetWidth;
+    const ch = container.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const scale = Math.min(vw / cw, vh / ch, 1); // never scale UP beyond 1×
+    container.style.transform = `scale(${scale})`;
+}
+
+window.addEventListener('resize', fitToViewport);
+fitToViewport();
+// ── End Scaling ──
 
 // Fit message text inside container
 function fitText(el){
