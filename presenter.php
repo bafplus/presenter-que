@@ -34,9 +34,23 @@ body { margin:0; background:#000; color:<?= htmlspecialchars($color) ?>; font-fa
     box-sizing:border-box; 
     display:flex; 
     align-items:center; 
-    justify-content:flex-start; 
+    justify-content:space-between; 
     overflow:hidden; 
 }
+#fsBtn {
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+#fsBtn:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+#fsBtn svg { width: 24px; height: 24px; fill: currentColor; }
 #messageContainer { 
     flex:1; 
     display:flex; 
@@ -58,6 +72,9 @@ body { margin:0; background:#000; color:<?= htmlspecialchars($color) ?>; font-fa
         <?php if($clockEnabled==='1'): ?>
             <span id="clock">--:--:--</span>
         <?php endif; ?>
+        <span id="fsBtn" title="Toggle fullscreen">
+            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        </span>
     </div>
     <div id="messageContainer">
         <span id="messageText"><span id="messageTitle"></span></span>
@@ -123,6 +140,39 @@ if (navigator.wakeLock) {
     }, 30000);
 }
 // ── End Wake Lock ──
+
+// ── Fullscreen toggle ──
+const fsBtn = document.getElementById('fsBtn');
+const fsIcon = fsBtn.querySelector('svg path');
+
+function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function getFsIconPath(fs) {
+    return fs
+        ? 'M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z'  // compress (exit)
+        : 'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z';  // expand (enter)
+}
+
+fsBtn.addEventListener('click', async () => {
+    if (isFullscreen()) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+        const el = document.documentElement;
+        if (el.requestFullscreen) await el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+});
+
+document.addEventListener('fullscreenchange', () => {
+    fsIcon.setAttribute('d', getFsIconPath(isFullscreen()));
+});
+document.addEventListener('webkitfullscreenchange', () => {
+    fsIcon.setAttribute('d', getFsIconPath(isFullscreen()));
+});
+// ── End Fullscreen ──
 
 // Fit message text inside container
 function fitText(el){
