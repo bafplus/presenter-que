@@ -37,7 +37,7 @@ body {
     width:100vw; 
     height:100vh; 
     max-width:1920px; 
-    max-height:1080px; 
+    max-height:1440px; 
     display:flex; 
     flex-direction:column; 
 }
